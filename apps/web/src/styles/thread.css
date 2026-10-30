@@ -403,7 +403,8 @@ button.thread__older:hover {
 }
 
 .said__attachments:has(> :only-child) {
-  grid-template-columns: minmax(0, 301px);
+  display: block;
+  max-width: min(100%, 360px);
 }
 
 .said__attachments .viewed-image-preview--message {
@@ -411,14 +412,34 @@ button.thread__older:hover {
   margin: 0;
 }
 
+.said__attachments:has(> :only-child) .viewed-image-preview--message {
+  width: fit-content;
+  max-width: 100%;
+}
+
 .said__attachments .viewed-image-preview__open,
 .said__attachments .viewed-image-preview--message:is(.is-loading, .is-unavailable) {
   height: 118px;
 }
 
-.said__attachments > :only-child .viewed-image-preview__open,
-.said__attachments > .viewed-image-preview--message:is(.is-loading, .is-unavailable):only-child {
-  height: 178px;
+.said__attachments > :only-child .viewed-image-preview__open {
+  width: fit-content;
+  height: fit-content;
+  max-width: min(100%, 360px);
+  max-height: 300px;
+}
+
+.said__attachments > :only-child .viewed-image-preview__open img {
+  width: auto;
+  height: auto;
+  max-width: min(100%, 360px);
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.said__attachments > :only-child .viewed-image-preview--message:is(.is-loading, .is-unavailable) {
+  width: 240px;
+  height: 160px;
 }
 
 .viewed-image-preview__placeholder {

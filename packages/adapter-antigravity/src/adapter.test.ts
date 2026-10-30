@@ -6,6 +6,7 @@ import {
   AntigravityAdapter,
   ANTIGRAVITY_CAPABILITIES,
   antigravityTurnArgs,
+  formatAntigravityPrompt,
   parseAntigravityModels,
 } from './adapter.js'
 import { resetAntigravityIndexForTests } from './models.js'
@@ -374,8 +375,26 @@ describe('Antigravity model list', () => {
     ])
   })
 
-  it('declares the print-mode capability set', () => {
-    expect(ANTIGRAVITY_CAPABILITIES).toMatchObject({ steer: false, approvals: false })
+  it('declares the print-mode capability set with image support', () => {
+    expect(ANTIGRAVITY_CAPABILITIES).toMatchObject({ steer: false, approvals: false, images: true })
+  })
+
+  it('formats attached files into prompt for agy read_file tool', () => {
+    expect(formatAntigravityPrompt('Check this', [])).toBe('Check this')
+    const formatted = formatAntigravityPrompt('Check this', ['/tmp/shot.png', '/tmp/doc.pdf'])
+    expect(formatted).toContain('Check this')
+    expect(formatted).toContain('- /tmp/shot.png')
+    expect(formatted).toContain('- /tmp/doc.pdf')
+    expect(formatted).toContain('read_file')
+  })
+
+  it('passes formatted attachments into the spawn argv', async () => {
+    const record: SpawnRecord = {}
+    const child = new FakeChild()
+    const adapter = new AntigravityAdapter({ spawn: fakeSpawn(record, child) })
+    const thread = await adapter.startThread('C:\\repo')
+    await adapter.sendTurn(thread.id, 'Look at screenshot', ['/tmp/shot.png'])
+    expect(record.args).toEqual(expect.arrayContaining([expect.stringContaining('/tmp/shot.png')]))
   })
 })
 

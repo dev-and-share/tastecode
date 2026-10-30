@@ -3,6 +3,7 @@ export {
   ANTIGRAVITY_CAPABILITIES,
   ANTIGRAVITY_SUPPORTED_VERSION,
   antigravityTurnArgs,
+  formatAntigravityPrompt,
   parseAntigravityModels,
   type AntigravityStartOptions,
 } from './adapter.js'

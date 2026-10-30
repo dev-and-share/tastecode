@@ -56,6 +56,7 @@ import {
   knownViewedImagePreview,
   previewViewedImage,
   revealPath,
+  type PickedAttachment,
 } from '../bridge.js'
 import {
   FIND_IN_CHAT_SHORTCUT,
@@ -3268,12 +3269,13 @@ function ViewedImagePreview({
   fallbackClassName?: string
   variant?: 'detail' | 'message'
 }) {
+  const resolveChatImage = useContext(ChatImageContext)
   // A disclosure measures its row in the commit that opens it. A preview that
   // arrives a frame later would resize the reveal mid-wipe, so anything
   // already known renders in the first frame.
   const [preview, setPreview] = useState(() => knownViewedImagePreview(reference))
   const [previewSettled, setPreviewSettled] = useState(
-    () => preview !== undefined || !canPreviewViewedImages,
+    () => preview !== undefined || (!canPreviewViewedImages && !resolveChatImage),
   )
   const [viewerOpen, setViewerOpen] = useState(false)
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
@@ -3284,29 +3286,50 @@ function ViewedImagePreview({
     let cancelled = false
     const known = knownViewedImagePreview(reference)
     setPreview(known)
-    setPreviewSettled(known !== undefined || !canPreviewViewedImages)
+    setPreviewSettled(known !== undefined || (!canPreviewViewedImages && !resolveChatImage))
     setThumbnailFailed(false)
     setImageFailed(false)
-    void previewViewedImage(reference)
-      .then((result) => {
-        if (!cancelled) {
-          setPreview(result)
-          setPreviewSettled(true)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setPreviewSettled(true)
-      })
+    if (known) return
+    if (canPreviewViewedImages) {
+      void previewViewedImage(reference)
+        .then((result) => {
+          if (!cancelled) {
+            setPreview(result)
+            setPreviewSettled(true)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setPreviewSettled(true)
+        })
+    } else if (resolveChatImage) {
+      void resolveChatImage(reference)
+        .then((dataUrl) => {
+          if (!cancelled) {
+            const result: PickedAttachment = {
+              path: reference,
+              name: attachmentName(reference),
+              mediaType: 'image',
+              previewUrl: dataUrl,
+              thumbnailUrl: dataUrl,
+            }
+            setPreview(result)
+            setPreviewSettled(true)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setPreviewSettled(true)
+        })
+    }
     return () => {
       cancelled = true
     }
-  }, [active, reference])
+  }, [active, reference, resolveChatImage])
 
   const inlineSource =
     preview?.thumbnailUrl && !thumbnailFailed ? preview.thumbnailUrl : preview?.previewUrl
   if (!preview || !inlineSource || !preview.previewUrl || imageFailed) {
     // Without a bridge nothing will ever load, so the plain reference is final.
-    if (variant === 'detail' && fallbackClassName && !canPreviewViewedImages) {
+    if (variant === 'detail' && fallbackClassName && !canPreviewViewedImages && !resolveChatImage) {
       return <pre className={fallbackClassName}>{reference}</pre>
     }
     const status = previewSettled ? 'is-unavailable' : 'is-loading'

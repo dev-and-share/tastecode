@@ -305,10 +305,13 @@ export async function savePastedFile(file: File): Promise<PickedAttachment | und
       const data = arrayBufferBase64(bytes)
       const mimeType = file.type || 'image/png'
       const { path } = await fallbackTransport.request('attachments.saveImage', { mimeType, data })
+      const dataUrl = `data:${mimeType};base64,${data}`
       const attachment: PickedAttachment = {
         path,
         name: file.name || attachmentName(path),
         mediaType: 'image',
+        previewUrl: dataUrl,
+        thumbnailUrl: dataUrl,
       }
       rememberAttachmentPreview(attachment.path, attachment)
       return attachment

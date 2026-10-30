@@ -49,7 +49,7 @@ export const ANTIGRAVITY_CAPABILITIES: Capabilities = {
   interrupt: true,
   reasoningItems: false,
   approvals: false,
-  images: false,
+  images: true,
 }
 
 export type AntigravityStartOptions = {
@@ -74,6 +74,16 @@ function applyAntigravityTurnOptions(
     else merged[field] = value
   }
   return merged
+}
+
+/**
+ * Format user prompt with any attached file paths so agy's coding agent loop
+ * can inspect them with its read_file tool.
+ */
+export function formatAntigravityPrompt(text: string, attachments: string[] = []): string {
+  if (attachments.length === 0) return text
+  const fileLines = attachments.map((file) => `- ${file}`).join('\n')
+  return `${text}\n\n[Attached files]:\n${fileLines}\n(Use the read_file tool to inspect these attached files if needed.)`
 }
 
 /**
@@ -191,7 +201,6 @@ export class AntigravityAdapter extends EventEmitter<AntigravityAdapterEvents> {
     attachments: string[] = [],
     options: AntigravityTurnOptions = {},
   ): Promise<string> {
-    if (attachments.length) throw new Error('Antigravity attachments are not supported yet')
     this.#options = applyAntigravityTurnOptions(this.#options, options)
     // The picker normally warms this process-wide index. A server restart can
     // resume straight into a turn, though, and passing the collapsed anchor
@@ -204,10 +213,11 @@ export class AntigravityAdapter extends EventEmitter<AntigravityAdapterEvents> {
       }
     }
     const turnId = `${threadId}-turn-${++this.#turnCounter}`
+    const userPrompt = formatAntigravityPrompt(text, attachments)
     const prompt =
       this.#instructionsPending && this.#options.instructions
-        ? `<system-instructions>\n${this.#options.instructions}\n</system-instructions>\n\n${text}`
-        : text
+        ? `<system-instructions>\n${this.#options.instructions}\n</system-instructions>\n\n${userPrompt}`
+        : userPrompt
     this.#instructionsPending = false
     const args = antigravityTurnArgs(prompt, this.#options, this.#conversationId)
 

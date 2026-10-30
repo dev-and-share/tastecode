@@ -37,6 +37,7 @@ import {
   isMacOS,
   onNativeMenuAction,
   pickFolder,
+  registerAttachmentTransport,
   reportStartupMilestone,
   setDesktopTheme,
   syncNativeMenuShortcuts,
@@ -637,6 +638,7 @@ function replaceSourceRows(
 
 export function App() {
   const [transport] = useState(() => new Transport(SERVER_BASE_URL))
+  useEffect(() => registerAttachmentTransport(transport), [transport])
   // StrictMode replays effect cleanup against this same memoized instance.
   const usageController = useMemo(
     () => new UsageLimitsController((params) => transport.request('usage.summary', params)),

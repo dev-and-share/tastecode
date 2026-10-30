@@ -1,4 +1,5 @@
 import type { PreviewCaptureRequest, PreviewCaptureResult } from '@harness/contracts'
+import type { Transport } from './transport.js'
 import type { ChatAttentionReport } from './chat-notifications.js'
 import type { KeybindingId, Keybindings, Shortcut } from './shortcuts.js'
 import {
@@ -277,8 +278,44 @@ export async function previewViewedImage(reference: string): Promise<PickedAttac
   }
 }
 
+let fallbackTransport: Transport | undefined
+
+export function registerAttachmentTransport(transport: Transport): () => void {
+  fallbackTransport = transport
+  return () => {
+    if (fallbackTransport === transport) fallbackTransport = undefined
+  }
+}
+
+function arrayBufferBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize))
+  }
+  return btoa(binary)
+}
+
 export async function savePastedFile(file: File): Promise<PickedAttachment | undefined> {
-  if (!bridge) return undefined
+  if (!bridge) {
+    if (!fallbackTransport) return undefined
+    try {
+      const bytes = await file.arrayBuffer()
+      const data = arrayBufferBase64(bytes)
+      const mimeType = file.type || 'image/png'
+      const { path } = await fallbackTransport.request('attachments.saveImage', { mimeType, data })
+      const attachment: PickedAttachment = {
+        path,
+        name: file.name || attachmentName(path),
+        mediaType: 'image',
+      }
+      rememberAttachmentPreview(attachment.path, attachment)
+      return attachment
+    } catch {
+      return undefined
+    }
+  }
   const saved = await bridge.savePastedFile({
     name: file.name,
     type: file.type,

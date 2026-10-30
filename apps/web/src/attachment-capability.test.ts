@@ -36,11 +36,19 @@ describe('source attachment capability', () => {
         auth: 'authenticated',
         capabilities: capabilities(true),
       },
+      {
+        id: 'antigravity',
+        displayName: 'Antigravity',
+        installed: true,
+        auth: 'authenticated',
+        capabilities: capabilities(true),
+      },
     ]
 
     expect(sourceSupportsAttachments({ provider: 'codex' }, providers)).toBe(true)
     expect(sourceSupportsAttachments({ provider: 'claude-code' }, providers)).toBe(true)
     expect(sourceSupportsAttachments({ provider: 'grok' }, providers)).toBe(true)
+    expect(sourceSupportsAttachments({ provider: 'antigravity' }, providers)).toBe(true)
     expect(sourceSupportsAttachments({ provider: 'acp', agentId: 'gemini' }, providers)).toBe(false)
   })
 
